@@ -1,0 +1,113 @@
+{
+    "case": {
+        "affected_txn_ids": [
+            "3478782"
+        ],
+        "connected_card_ids": [],
+        "connected_device_profiles": [],
+        "evidence": [
+            {
+                "claim": "Flagged $292.36 online purchase (ProductCD C) is ~2.4x the card's prior max ($121.32) and the largest of 44 transactions; all history is ProductCD C online at $6-$121",
+                "entity_ids": [
+                    "3478782",
+                    "C11891-K1"
+                ],
+                "ref": "query:get_neighbors(Card/C11891-K1, MADE, limit=1000) on HHGOA_Fraud",
+                "source": "graph"
+            },
+            {
+                "claim": "No card-testing sequence: only one sub-$5 transaction ($2.68 on 2016-11-05) precedes the flagged purchase, not 3+ small authorizations within an hour",
+                "entity_ids": [
+                    "3433977",
+                    "3478782"
+                ],
+                "ref": "query:get_neighbors(Card/C11891-K1, MADE) sorted by ts",
+                "source": "graph"
+            },
+            {
+                "claim": "Flagged transaction carries no device profile (online txn without identity record) and no billing region; only graph link is purchaser email hotmail.com",
+                "entity_ids": [
+                    "3478782"
+                ],
+                "ref": "query:get_node_edges(Transaction/3478782)",
+                "source": "graph"
+            },
+            {
+                "claim": "Card resumed normal $26-$45 pattern in December (7 transactions), consistent with an active legitimate card",
+                "entity_ids": [
+                    "3537664",
+                    "3540380",
+                    "3544645"
+                ],
+                "ref": "query:get_neighbors(Card/C11891-K1, MADE) sorted by ts",
+                "source": "graph"
+            }
+        ],
+        "exposure_usd": 292.36,
+        "first_suspicious_txn_id": "3478782",
+        "fraud_probability": 0.42,
+        "graph_case_id": "HHG-002",
+        "pattern": "card_not_present_fraud",
+        "pattern_description": "",
+        "similar_prior_cases": [
+            "CC-0001",
+            "CC-0007"
+        ],
+        "status": "open",
+        "summary": "Isolated $292.36 online purchase far above the card's $20-$60 baseline, flagged at risk 0.79. No testing sequence, no device anomaly, no region shift, and normal December activity followed. Single weak signal: verify with customer before any block.",
+        "verdict": "uncertain",
+        "written_to_graph": true
+    },
+    "case_id": "HHG-002",
+    "evidence_requests": [
+        {
+            "asked_after_step": 5,
+            "assumed_response": "Customer confirms or denies the $292.36 purchase of 2016-11-22",
+            "type": "customer_validation"
+        }
+    ],
+    "latency_s": 0.0,
+    "next_best_actions": {
+        "final": [
+            {
+                "action": "BLOCK_CARD",
+                "reason": "R2: customer denied; exposure $292.36 is under $2,500 (L1)",
+                "route": "L1"
+            },
+            {
+                "action": "CREATE_CASE",
+                "reason": "R2: dispute opened",
+                "route": "auto"
+            }
+        ],
+        "initial": [
+            {
+                "action": "VERIFY_WITH_CUSTOMER",
+                "reason": "R1: single signal (unusual amount only), probability 0.42 < 0.70; confirm before blocking",
+                "route": "auto"
+            },
+            {
+                "action": "STEP_UP_AUTH",
+                "reason": "R1: protect further online activity pending reply",
+                "route": "auto"
+            },
+            {
+                "action": "MONITOR_CARD",
+                "reason": "R4: watch pending authorizations; exposure $292.36 under $500 escalation bar",
+                "route": "auto"
+            }
+        ],
+        "what_changed": "If the customer denies the purchase, probability rises and R2 triggers BLOCK_CARD + CREATE_CASE. If confirmed, R3 closes as legitimate. No FILE_REPORT: exposure under $1,000 with no shared device or second card (R2/3a)."
+    },
+    "sar": {
+        "activity_dates": [],
+        "file": false,
+        "narrative": "",
+        "reason": "No report: unconfirmed single-signal case, exposure $292.36 under $1,000, no shared device/region or second-card link (policy 3a, R2)",
+        "subjects": [],
+        "total_amount_usd": 0
+    },
+    "stop_reason": "Single-signal case at probability 0.42 requires customer verification under R1; further graph steps cannot raise or lower it without that reply.",
+    "tokens": 0,
+    "tool_calls": 9
+}
