@@ -2,6 +2,8 @@
 // (works offline / misconfigured static hosting), hard error last.
 import { CASE_FILES, CASE_INDEX } from "./casefiles.js";
 
+const caseCache = new Map();
+
 async function fetchJson(path) {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 15000);
@@ -24,10 +26,16 @@ export async function loadIndex() {
 }
 export async function loadCase(id, variant) {
   const key = `${id}${variant === "llm" ? ".llm" : ""}`;
+  if (caseCache.has(key)) return caseCache.get(key);
   try {
-    return await fetchJson(`cases/${key}.json`);
+    const d = await fetchJson(`cases/${key}.json`);
+    caseCache.set(key, d);
+    return d;
   } catch (_) {
-    if (CASE_FILES[key]) return CASE_FILES[key];
+    if (CASE_FILES[key]) {
+      caseCache.set(key, CASE_FILES[key]);
+      return CASE_FILES[key];
+    }
     return null;
   }
 }

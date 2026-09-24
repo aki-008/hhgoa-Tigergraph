@@ -7,10 +7,13 @@ case memory, and a Svelte review dashboard with live run traces.
 
 ## File types in a run directory (`cases/run_YYYYMMDD_HHMM/`, 80 files)
 
+Every case is investigated **twice — once by each judgment head — so each
+run contains 2 types of case results**:
+
 | Suffix | Producer | Purpose |
 |---|---|---|
-| `HHG-xxx.json` | `scripts/investigate.py` (rule-based) | **Submission answer**: case record (verdict, probability, pattern, evidence trail, exposure, memory), SAR filing, initial→final actions with routes, evidence requests, stop reason, stats |
-| `HHG-xxx.llm.json` | `scripts/llm_investigate.py` | Same schema, verdict/pattern/narrative from the LLM (+ Laya advisory), actions still policy-constrained |
+| **`HHG-xxx.json` — rule-based results** | `scripts/investigate.py` (heuristics + R1–R10 engine) | **Submission answer**: case record (verdict, probability, pattern, evidence trail, exposure, memory), SAR filing, initial→final actions with routes, evidence requests, stop reason, stats |
+| **`HHG-xxx.llm.json` — agentic (LLM + Laya) results** | `scripts/llm_investigate.py` (Qwen 3-27B via Groq + Laya typed-decision advisory, same policy guardrails) | Same schema, verdict/pattern/narrative from the LLM (+ Laya advisory signals); actions still policy-constrained |
 | `HHG-xxx.trace.jsonl` | rule run | Step-by-step run log: trigger → retrieve → assess → memory → evidence requests → actions → memorize → done (the dashboard Live-run tab polls this) |
 | `HHG-xxx.llm.trace.jsonl` | LLM run | Same, plus `llm_judge` (with real prompt/completion token counts) and `laya_decide` steps |
 

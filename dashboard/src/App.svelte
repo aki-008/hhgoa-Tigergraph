@@ -57,9 +57,11 @@
         <span class="ico">{ico}</span>{label}
       </button>
     {/each}
+    {#if tab === "overview" || tab === "case"}
     <div class="nav-label">Source</div>
     <button class="nav-item" class:active={variant === "rule"} onclick={() => (variant = "rule")}><span class="ico">⧉</span>Rule-based</button>
     <button class="nav-item" class:active={variant === "llm"} onclick={() => (variant = "llm")}><span class="ico">✦</span>LLM + Laya</button>
+    {/if}
   </aside>
 
   <div class="main">
