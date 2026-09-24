@@ -1,0 +1,93 @@
+{
+  "case_id": "HHG-018",
+  "case": {
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.3,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3491361"
+    ],
+    "first_suspicious_txn_id": "3491361",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 39.08,
+    "evidence": [
+      {
+        "claim": "Flagged $39.08 in_person txn (risk 0.48) vs card baseline max $4438.01 over 2000 prior txns",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C02354-K2)",
+        "entity_ids": [
+          "3491361"
+        ]
+      },
+      {
+        "claim": "cardholder denies the charge; matches recurring own pattern (60x)",
+        "source": "graph",
+        "ref": "query:txn_edges(txn_id=3491361) -> BILLED_IN,NEXT",
+        "entity_ids": [
+          "3491361"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0001",
+      "CC-0007",
+      "CC-0012"
+    ],
+    "summary": "customer_report on card C02354-K2: cardholder denies the charge; matches recurring own pattern (60x).",
+    "written_to_graph": true,
+    "graph_case_id": "HHG-018"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R7: disputed charge matches recurring pattern (60x ~$39.08)"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7"
+      },
+      {
+        "action": "WARN_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: recurring-charge reminder, do not block"
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R7: disputed charge matches recurring pattern (60x ~$39.08)"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R7"
+      },
+      {
+        "action": "WARN_CUSTOMER",
+        "route": "auto",
+        "reason": "R7: recurring-charge reminder, do not block"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "No report: unconfirmed single signal; exposure $39.08, no shared-device/second-card link (3a)",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "Stopping at p=0.30: verification pending under R1.",
+  "tool_calls": 6,
+  "tokens": 0,
+  "latency_s": 3.1
+}

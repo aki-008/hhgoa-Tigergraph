@@ -1,0 +1,131 @@
+{
+  "case_id": "HHG-006",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.8,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3476682"
+    ],
+    "first_suspicious_txn_id": "3476682",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 482.12,
+    "evidence": [
+      {
+        "claim": "Flagged $482.12 online txn (risk 0.25) vs baseline max $1104.00 over 153 priors",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C07297-K1)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "new device for account",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "cardholder denies the charge",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "customer denial with corroborating evidence (policy R2 uplift)",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Customer denies the $482.12 online charge.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Transaction occurred on a new device.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3476682"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0001",
+      "CC-0007",
+      "CC-0012"
+    ],
+    "summary": "LLM verdict fraud p=0.80 pattern=card_not_present_new_device.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer denied; exposure $482.12"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R2: exposure >$1,000 or new-device link"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer denied; exposure $482.12"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R2: exposure >$1,000 or new-device link"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "LLM investigation with policy guardrails",
+    "narrative": "On November 21, 2016, at 20:30, a card-not-present transaction for $482.12 was initiated on an online channel. The transaction, identified by ID 3476682, was processed using a device that had not previously been associated with the account. This activity triggered a risk score of 0.25 and was flagged due to the use of a new device. The customer subsequently denied authorization for the charge, providing corroborating evidence that supports the claim of fraud. This denial aligns with policy R2, which mandates an uplift in the severity of the incident. The transaction occurred in region 264.0, further distinguishing it from the customer's typical geographic patterns. The combination of a new device and explicit customer denial strongly indicates unauthorized access. The exposure amount of $482.12 represents a significant financial risk to the institution. The pattern of card-not-present activity on a new device is a classic indicator of account takeover. Immediate investigation is warranted to confirm the fraudulent nature of the transaction. The evidence suggests the cardholder did not consent to this specific online purchase. This case meets the criteria for a Suspicious Activity Report due to the clear signs of fraud.",
+    "subjects": [
+      "C07297",
+      "C07297-K1"
+    ],
+    "total_amount_usd": 482.12,
+    "activity_dates": [
+      "2016-11-21",
+      "2016-11-21"
+    ]
+  },
+  "stop_reason": "LLM verdict with policy validation.",
+  "tool_calls": 2,
+  "tokens": 0,
+  "latency_s": 24.1
+}

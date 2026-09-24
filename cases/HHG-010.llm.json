@@ -1,0 +1,131 @@
+{
+  "case_id": "HHG-010",
+  "case": {
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.65,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3506725"
+    ],
+    "first_suspicious_txn_id": "3506725",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 1000.03,
+    "evidence": [
+      {
+        "claim": "Flagged $1000.03 online txn (risk 0.9) vs baseline max $146.06 over 11 priors",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C10434-K1)",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "amount 1000.03 is 6.8x prior max",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "new device for account",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "Transaction amount is 6.85x the customer's historical mean.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "Purchase occurred on a new device not previously seen.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
+        "claim": "Risk score is high at 0.90, triggering review.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3506725"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0001",
+      "CC-0007",
+      "CC-0012"
+    ],
+    "summary": "LLM verdict uncertain p=0.65 pattern=card_not_present_new_device.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 4,
+      "assumed_response": "Customer no reply within 24h"
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R1: single signal, p=0.55 < 0.70"
+      },
+      {
+        "action": "STEP_UP_AUTH",
+        "route": "auto",
+        "reason": "R1"
+      },
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "R4: watch pending"
+      }
+    ],
+    "final": [
+      {
+        "action": "MONITOR_CARD",
+        "route": "auto",
+        "reason": "R4: no reply"
+      },
+      {
+        "action": "DECLINE_TRANSACTION",
+        "route": "L1",
+        "reason": "R4: pending auths"
+      },
+      {
+        "action": "ESCALATE_TO_ANALYST",
+        "route": "auto",
+        "reason": "R4/R8: exposure $1000.03 > $500"
+      }
+    ],
+    "what_changed": "LLM judgment + policy guardrails"
+  },
+  "sar": {
+    "file": false,
+    "reason": "No report per policy 3a",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "LLM verdict with policy validation.",
+  "tool_calls": 2,
+  "tokens": 0,
+  "latency_s": 22.0
+}

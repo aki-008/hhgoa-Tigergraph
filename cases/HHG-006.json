@@ -1,0 +1,107 @@
+{
+  "case_id": "HHG-006",
+  "case": {
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.8,
+    "pattern": "card_not_present_new_device",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3476682"
+    ],
+    "first_suspicious_txn_id": "3476682",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 482.12,
+    "evidence": [
+      {
+        "claim": "Flagged $482.12 online txn (risk 0.25) vs card baseline max $1104.00 over 153 prior txns",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C07297-K1)",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "new device for account; cardholder denies the charge",
+        "source": "graph",
+        "ref": "query:txn_edges(txn_id=3476682) -> BILLED_IN,FROM_DEVICE,NEXT,PURCHASER_EMAIL",
+        "entity_ids": [
+          "3476682"
+        ]
+      },
+      {
+        "claim": "Device profile: Trident/7.0|Windows 7|ie 11.0 for desktop|1920x1080 (New for account)",
+        "source": "graph",
+        "ref": "query:txn_device",
+        "entity_ids": [
+          "3476682"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0011",
+      "CC-0018",
+      "CC-0019"
+    ],
+    "summary": "customer_report on card C07297-K1: new device for account; cardholder denies the charge.",
+    "written_to_graph": true,
+    "graph_case_id": "HHG-006"
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer denied; exposure $482.12"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R2: exposure >$1,000 or new-device link"
+      }
+    ],
+    "final": [
+      {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "R2: customer denied; exposure $482.12"
+      },
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R2"
+      },
+      {
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "R2: exposure >$1,000 or new-device link"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": true,
+    "reason": "R2/R6: confirmed fraud with exposure/linkage",
+    "narrative": "On , card C07297-K1 of customer C07297 was used for a $482.12 online transaction (product code C, risk score 0.25). The amount is 0.4x the card's prior maximum ($1104.00), inconsistent with established history. Device profile marked new for the account.  The cardholder denied the activity when contacted. Total exposure $482.12. Card blocked pending reissue.",
+    "subjects": [
+      "C07297",
+      "C07297-K1"
+    ],
+    "total_amount_usd": 482.12,
+    "activity_dates": [
+      "2016-11-21",
+      "2016-11-21"
+    ]
+  },
+  "stop_reason": "Stopping at p=0.80: decision supported by pattern evidence.",
+  "tool_calls": 6,
+  "tokens": 0,
+  "latency_s": 9.2
+}

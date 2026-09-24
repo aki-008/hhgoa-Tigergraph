@@ -1,0 +1,87 @@
+{
+  "case_id": "HHG-010",
+  "trigger": "risk_score",
+  "trigger_text": "Real-time model scored transaction 3506725 ($1,000.03, online) at 0.90. Review and decide.",
+  "flagged": {
+    "txn_id": "3506725",
+    "amount": 1000.03,
+    "ts": "2016-12-02 15:18:27",
+    "channel": "online",
+    "product_cd": "R",
+    "risk_score": 0.9,
+    "region": "469.0"
+  },
+  "baseline": {
+    "n_prior": 11,
+    "prior_max": 146.06,
+    "prior_mean": 84.83,
+    "amount_ratio": 6.85
+  },
+  "recent_history": [
+    {
+      "txn": "3392418",
+      "amt": 58.01,
+      "ts": "2016-10-24 01:06:51",
+      "prod": "W"
+    },
+    {
+      "txn": "3397310",
+      "amt": 29.97,
+      "ts": "2016-10-25 19:33:28",
+      "prod": "H"
+    },
+    {
+      "txn": "3411190",
+      "amt": 146.06,
+      "ts": "2016-10-30 02:24:45",
+      "prod": "W"
+    },
+    {
+      "txn": "3419055",
+      "amt": 117.06,
+      "ts": "2016-11-01 16:35:29",
+      "prod": "W"
+    },
+    {
+      "txn": "3475344",
+      "amt": 96.98,
+      "ts": "2016-11-21 06:09:47",
+      "prod": "W"
+    },
+    {
+      "txn": "3492086",
+      "amt": 100.04,
+      "ts": "2016-11-27 17:54:39",
+      "prod": "R"
+    },
+    {
+      "txn": "3519858",
+      "amt": 100.03,
+      "ts": "2016-12-06 19:27:28",
+      "prod": "R"
+    },
+    {
+      "txn": "3577244",
+      "amt": 107.96,
+      "ts": "2016-12-26 20:09:00",
+      "prod": "W"
+    }
+  ],
+  "signals": {
+    "burst_48h": 1,
+    "testing_seq": [],
+    "novel_product": false,
+    "novel_region": false,
+    "has_device": true,
+    "new_device": true,
+    "proxy": false,
+    "device": "Windows|Windows 10|edge 16.0|1366x768",
+    "recurring_matches": 0,
+    "shared_device_cards": []
+  },
+  "similar_prior_cases": [
+    "CC-0001",
+    "CC-0007",
+    "CC-0012"
+  ]
+}

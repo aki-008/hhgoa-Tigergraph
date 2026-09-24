@@ -3,8 +3,8 @@
   "case": {
     "status": "open",
     "verdict": "uncertain",
-    "fraud_probability": 0.35,
-    "pattern": "card_not_present_fraud",
+    "fraud_probability": 0.45,
+    "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [
       "3478782"
@@ -15,7 +15,7 @@
     "exposure_usd": 292.36,
     "evidence": [
       {
-        "claim": "Flagged $292.36 online txn (risk 0.79) vs card baseline max $121.32 over 43 prior txns",
+        "claim": "Flagged $292.36 online txn (risk 0.79) vs baseline max $121.32 over 43 priors",
         "source": "graph",
         "ref": "query:card_window(card_id=C11891-K1)",
         "entity_ids": [
@@ -25,16 +25,42 @@
       {
         "claim": "amount 292.36 is 2.4x prior max",
         "source": "graph",
-        "ref": "query:txn_edges(txn_id=3478782) -> NEXT,PURCHASER_EMAIL",
+        "ref": "llm:evidence_brief",
         "entity_ids": [
           "3478782"
         ]
       },
       {
-        "claim": "Customer no reply within 24h on validation request",
-        "source": "customer",
-        "ref": "evidence_request:1",
-        "entity_ids": []
+        "claim": "Single transaction is 2.4x the customer's historical mean spend.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "Risk score of 0.79 is elevated but below the 0.70 threshold for immediate block.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "No evidence of card testing, new device, or out-of-region activity.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3478782"
+        ]
+      },
+      {
+        "claim": "Recent history shows normal recurring small purchases without anomalies.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3478782"
+        ]
       }
     ],
     "similar_prior_cases": [
@@ -42,15 +68,15 @@
       "CC-0007",
       "CC-0012"
     ],
-    "summary": "risk_score on card C11891-K1: amount 292.36 is 2.4x prior max.",
-    "written_to_graph": true,
-    "graph_case_id": "HHG-002"
+    "summary": "LLM verdict uncertain p=0.45 pattern=none.",
+    "written_to_graph": false,
+    "graph_case_id": ""
   },
   "evidence_requests": [
     {
       "type": "customer_validation",
       "asked_after_step": 4,
-      "assumed_response": "Customer did not respond about the $292.36 transaction of 2016-11-22 17:27:07"
+      "assumed_response": "Customer no reply within 24h"
     }
   ],
   "next_best_actions": {
@@ -83,18 +109,18 @@
         "reason": "R4: pending auths"
       }
     ],
-    "what_changed": "Customer response moved p and finalized block/monitor path under R2/R4."
+    "what_changed": "LLM judgment + policy guardrails"
   },
   "sar": {
     "file": false,
-    "reason": "No report: unconfirmed single signal; exposure $292.36, no shared-device/second-card link (3a)",
+    "reason": "No report per policy 3a",
     "narrative": "",
     "subjects": [],
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Stopping at p=0.35: verification pending under R1.",
-  "tool_calls": 5,
+  "stop_reason": "LLM verdict with policy validation.",
+  "tool_calls": 1,
   "tokens": 0,
-  "latency_s": 2.1
+  "latency_s": 22.1
 }

@@ -1,0 +1,95 @@
+{
+  "case_id": "HHG-007",
+  "case": {
+    "status": "closed_legitimate",
+    "verdict": "legitimate",
+    "fraud_probability": 0.15,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [],
+    "first_suspicious_txn_id": "",
+    "connected_card_ids": [],
+    "connected_device_profiles": [],
+    "exposure_usd": 0,
+    "evidence": [
+      {
+        "claim": "Flagged $111.92 in_person txn (risk 0.87) vs baseline max $2568.27 over 1203 priors",
+        "source": "graph",
+        "ref": "query:card_window(card_id=C09933-K2)",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "Transaction amount is within the customer's historical spending range.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "Five recurring matches indicate a consistent, known spending pattern.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "No novel region, product, or device signals are present.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3514948"
+        ]
+      },
+      {
+        "claim": "Risk score is high but lacks supporting behavioral anomalies.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3514948"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0001",
+      "CC-0007",
+      "CC-0012"
+    ],
+    "summary": "LLM verdict legitimate p=0.15 pattern=none.",
+    "written_to_graph": false,
+    "graph_case_id": ""
+  },
+  "evidence_requests": [],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "LLM: legitimate"
+      }
+    ],
+    "final": [
+      {
+        "action": "CLOSE_NO_FRAUD",
+        "route": "auto",
+        "reason": "LLM: legitimate"
+      }
+    ],
+    "what_changed": "nothing"
+  },
+  "sar": {
+    "file": false,
+    "reason": "No report per policy 3a",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0,
+    "activity_dates": []
+  },
+  "stop_reason": "LLM verdict with policy validation.",
+  "tool_calls": 1,
+  "tokens": 0,
+  "latency_s": 22.9
+}
