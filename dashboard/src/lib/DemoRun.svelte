@@ -3,7 +3,6 @@
   import { Button } from "$lib/components/ui/button";
   import { Progress } from "$lib/components/ui/progress";
   import { Slider } from "$lib/components/ui/slider";
-  import GeometricOrb from "./GeometricOrb.svelte";
   import RichText from "./RichText.svelte";
   import { verdictColor } from "./data.js";
   let { index } = $props();
@@ -288,9 +287,11 @@
         </g>
       {/each}
       <circle cx={CX} cy={CY} r="46" fill="none" stroke="rgba(91,124,255,.25)" />
+      <circle cx={CX} cy={CY} r="34" fill="url(#orb)" filter="url(#glow)">
+        <animate attributeName="r" values="34;37;34" dur="2.4s" repeatCount="indefinite" />
+      </circle>
       <text x={CX} y={CY + 58} text-anchor="middle" class="agentlabel">AGENT</text>
     </svg>
-    <div class="orb3d"><GeometricOrb color="#8ab4ff" active={running} /></div>
     </div>
     {#if doneCases.length}
       <div class="chips">
@@ -335,7 +336,6 @@
   .stage svg { width: 100%; height: 100%; display: block; }
   .stagewrap { position: relative; aspect-ratio: 560 / 480; }
   .stagewrap > svg { position: absolute; inset: 0; }
-  .orb3d { position: absolute; left: 50%; top: 45.8%; width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
   .nico { fill: #c9cedb; font-size: 17px; }
   .nlabel { fill: #8b90a0; font-size: 10px; }
   .agentlabel { fill: #c9cedb; font-size: 11px; letter-spacing: 0.22em; }
