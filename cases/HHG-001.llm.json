@@ -21,7 +21,7 @@
         ]
       },
       {
-        "claim": "Transaction amount is 9% of the customer's historical mean.",
+        "claim": "laya: pattern=card_not_present_fraud p=0.410 conf=0.12",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -29,7 +29,7 @@
         ]
       },
       {
-        "claim": "Purchase occurred in the customer's billing region.",
+        "claim": "Transaction is in-person in the billing region, not online.",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -37,7 +37,7 @@
         ]
       },
       {
-        "claim": "Channel is in-person, matching the customer's established pattern.",
+        "claim": "Amount is 9% of the prior mean, well within normal range.",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -45,7 +45,15 @@
         ]
       },
       {
-        "claim": "High recurring match count indicates normal usage behavior.",
+        "claim": "13 recurring matches indicate established, consistent usage patterns.",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3514030"
+        ]
+      },
+      {
+        "claim": "No new device, novel region, or card testing sequence detected.",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -54,9 +62,9 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-0001",
-      "CC-0007",
-      "CC-0012"
+      "CC-0086",
+      "CC-0284",
+      "CC-0257"
     ],
     "summary": "LLM verdict legitimate p=0.15 pattern=none.",
     "written_to_graph": false,
@@ -89,7 +97,7 @@
     "activity_dates": []
   },
   "stop_reason": "LLM verdict with policy validation.",
-  "tool_calls": 1,
-  "tokens": 0,
-  "latency_s": 25.4
+  "tool_calls": 3,
+  "tokens": 1670,
+  "latency_s": 26.6
 }

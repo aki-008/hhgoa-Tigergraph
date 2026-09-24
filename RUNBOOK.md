@@ -76,8 +76,22 @@ with token counts — the dashboard Live-run tab polls these files).
 
 ```bash
 python scripts/sync_dashboard_data.py     # copies latest cases/ into dashboard
-cd dashboard && npm run dev               # Overview | Case evidence trail | Rule vs LLM | Live run
+cd dashboard && npm run dev               # Overview | Case | Rule vs LLM | Demo run
 ```
+
+## 5b. Live demo server (real execution, not replay)
+
+```bash
+python server.py --port 8000             # serves UI + runs the agent on demand
+# open http://127.0.0.1:8000 -> Demo run tab -> Live -> Run live
+```
+
+The dashboard POSTs `/api/run` (localhost only; secrets stay in server-side
+`.env`), the server executes the real pipeline case by case, and the UI polls
+`/api/trace` every 1.5s — orb trails glow, the token stream flows, verdict
+badges land as each `done` step arrives. One run at a time (409 if busy);
+Stop finishes the current case. Without the server, the tab falls back to
+timed replay of recorded traces.
 
 ## 6. Troubleshooting
 

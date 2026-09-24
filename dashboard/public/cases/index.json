@@ -1,6 +1,7 @@
 [
  {
   "case_id": "HHG-001",
+  "trigger": "risk_score",
   "has_trace": true,
   "rule": {
    "verdict": "legitimate",
@@ -19,6 +20,7 @@
  },
  {
   "case_id": "HHG-002",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -37,6 +39,7 @@
  },
  {
   "case_id": "HHG-003",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -55,6 +58,7 @@
  },
  {
   "case_id": "HHG-004",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "fraud",
@@ -73,6 +77,7 @@
  },
  {
   "case_id": "HHG-005",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -91,6 +96,7 @@
  },
  {
   "case_id": "HHG-006",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "fraud",
@@ -109,6 +115,7 @@
  },
  {
   "case_id": "HHG-007",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "legitimate",
@@ -127,6 +134,7 @@
  },
  {
   "case_id": "HHG-008",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -145,6 +153,7 @@
  },
  {
   "case_id": "HHG-009",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -163,6 +172,7 @@
  },
  {
   "case_id": "HHG-010",
+  "trigger": "risk_score",
   "has_trace": true,
   "rule": {
    "verdict": "uncertain",
@@ -181,6 +191,7 @@
  },
  {
   "case_id": "HHG-011",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -190,16 +201,17 @@
    "sar": false
   },
   "llm": {
-   "verdict": "legitimate",
-   "p": 0.15,
-   "pattern": "none",
-   "exposure": 0,
+   "verdict": "uncertain",
+   "p": 0.45,
+   "pattern": "card_not_present_new_device",
+   "exposure": 131.3,
    "sar": false
   }
  },
  {
   "case_id": "HHG-012",
-  "has_trace": false,
+  "trigger": "risk_score",
+  "has_trace": true,
   "rule": {
    "verdict": "legitimate",
    "p": 0.15,
@@ -217,6 +229,7 @@
  },
  {
   "case_id": "HHG-013",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -235,6 +248,7 @@
  },
  {
   "case_id": "HHG-014",
+  "trigger": "analyst_request",
   "has_trace": true,
   "rule": {
    "verdict": "uncertain",
@@ -253,6 +267,7 @@
  },
  {
   "case_id": "HHG-015",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -271,6 +286,7 @@
  },
  {
   "case_id": "HHG-016",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "fraud",
@@ -289,12 +305,13 @@
  },
  {
   "case_id": "HHG-017",
-  "has_trace": false,
+  "trigger": "risk_score",
+  "has_trace": true,
   "rule": {
-   "verdict": "uncertain",
-   "p": 0.4,
+   "verdict": "legitimate",
+   "p": 0.15,
    "pattern": "card_not_present_fraud",
-   "exposure": 100.09,
+   "exposure": 0,
    "sar": false
   },
   "llm": {
@@ -307,6 +324,7 @@
  },
  {
   "case_id": "HHG-018",
+  "trigger": "customer_report",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -325,6 +343,7 @@
  },
  {
   "case_id": "HHG-019",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",
@@ -343,6 +362,7 @@
  },
  {
   "case_id": "HHG-020",
+  "trigger": "risk_score",
   "has_trace": false,
   "rule": {
    "verdict": "uncertain",

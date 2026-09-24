@@ -1,14 +1,35 @@
-// Data layer: index + per-case files from public/cases/
+// Data layer: live fetch first (fresh runs), bundled snapshot fallback
+// (works offline / misconfigured static hosting), hard error last.
+import { CASE_FILES, CASE_INDEX } from "./casefiles.js";
+
+async function fetchJson(path) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch(path, { cache: "no-store", signal: ctrl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } finally {
+    clearTimeout(to);
+  }
+}
+
 export async function loadIndex() {
-  const r = await fetch("cases/index.json");
-  if (!r.ok) throw new Error("index.json missing — run scripts/sync_dashboard_data.py");
-  return r.json();
+  try {
+    return await fetchJson("cases/index.json");
+  } catch (_) {
+    if (CASE_INDEX?.length) return CASE_INDEX;
+    throw new Error("index.json missing and no bundled fallback — run scripts/sync_dashboard_data.py");
+  }
 }
 export async function loadCase(id, variant) {
-  const suffix = variant === "llm" ? ".llm.json" : ".json";
-  const r = await fetch(`cases/${id}${suffix}`);
-  if (!r.ok) return null;
-  return r.json();
+  const key = `${id}${variant === "llm" ? ".llm" : ""}`;
+  try {
+    return await fetchJson(`cases/${key}.json`);
+  } catch (_) {
+    if (CASE_FILES[key]) return CASE_FILES[key];
+    return null;
+  }
 }
 export const verdictColor = (v) =>
   v === "fraud" ? "#e5484d" : v === "legitimate" ? "#30a46c" : "#f5a524";

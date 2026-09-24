@@ -23,6 +23,14 @@
         ]
       },
       {
+        "claim": "laya: pattern=card_not_present_new_device p=0.146 conf=0.38",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
+        "entity_ids": [
+          "3506725"
+        ]
+      },
+      {
         "claim": "amount 1000.03 is 6.8x prior max",
         "source": "graph",
         "ref": "llm:evidence_brief",
@@ -39,7 +47,7 @@
         ]
       },
       {
-        "claim": "Transaction amount is 6.85x the customer's historical mean.",
+        "claim": "Transaction amount is 6.85x the customer's historical mean",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -47,15 +55,7 @@
         ]
       },
       {
-        "claim": "Purchase occurred on a new device not previously seen.",
-        "source": "graph",
-        "ref": "llm:evidence_brief",
-        "entity_ids": [
-          "3506725"
-        ]
-      },
-      {
-        "claim": "Risk score of 0.90 indicates high anomaly but is not a verdict.",
+        "claim": "Purchase occurred on a device new to this account",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -64,9 +64,9 @@
       }
     ],
     "similar_prior_cases": [
-      "CC-0001",
-      "CC-0007",
-      "CC-0012"
+      "CC-0086",
+      "CC-0284",
+      "CC-0257"
     ],
     "summary": "LLM verdict uncertain p=0.65 pattern=card_not_present_new_device.",
     "written_to_graph": false,
@@ -125,7 +125,7 @@
     "activity_dates": []
   },
   "stop_reason": "LLM verdict with policy validation.",
-  "tool_calls": 2,
-  "tokens": 1169,
-  "latency_s": 38.3
+  "tool_calls": 3,
+  "tokens": 1646,
+  "latency_s": 37.4
 }

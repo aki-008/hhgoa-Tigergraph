@@ -1,21 +1,31 @@
 {
   "case_id": "HHG-011",
   "case": {
-    "status": "closed_legitimate",
-    "verdict": "legitimate",
-    "fraud_probability": 0.15,
-    "pattern": "none",
+    "status": "open",
+    "verdict": "uncertain",
+    "fraud_probability": 0.45,
+    "pattern": "card_not_present_new_device",
     "pattern_description": "",
-    "affected_txn_ids": [],
-    "first_suspicious_txn_id": "",
+    "affected_txn_ids": [
+      "3583368"
+    ],
+    "first_suspicious_txn_id": "3583368",
     "connected_card_ids": [],
     "connected_device_profiles": [],
-    "exposure_usd": 0,
+    "exposure_usd": 131.3,
     "evidence": [
       {
         "claim": "Flagged $131.30 online txn (risk 0.39) vs baseline max $334.92 over 1999 priors",
         "source": "graph",
         "ref": "query:card_window(card_id=C11923-K2)",
+        "entity_ids": [
+          "3583368"
+        ]
+      },
+      {
+        "claim": "laya: pattern=card_testing p=0.733 conf=0.15",
+        "source": "graph",
+        "ref": "llm:evidence_brief",
         "entity_ids": [
           "3583368"
         ]
@@ -51,22 +61,14 @@
         "entity_ids": [
           "3583368"
         ]
-      },
-      {
-        "claim": "Customer denial matches recurring pattern with 3 prior identical transactions",
-        "source": "graph",
-        "ref": "llm:evidence_brief",
-        "entity_ids": [
-          "3583368"
-        ]
       }
     ],
     "similar_prior_cases": [
-      "CC-0001",
-      "CC-0007",
-      "CC-0012"
+      "CC-0086",
+      "CC-0284",
+      "CC-0257"
     ],
-    "summary": "LLM verdict legitimate p=0.15 pattern=none.",
+    "summary": "LLM verdict uncertain p=0.45 pattern=card_not_present_new_device.",
     "written_to_graph": false,
     "graph_case_id": ""
   },
@@ -117,7 +119,7 @@
     "activity_dates": []
   },
   "stop_reason": "LLM verdict with policy validation.",
-  "tool_calls": 2,
-  "tokens": 0,
-  "latency_s": 26.0
+  "tool_calls": 3,
+  "tokens": 1727,
+  "latency_s": 27.9
 }
