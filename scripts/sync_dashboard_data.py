@@ -23,8 +23,13 @@ for fp in sorted((BASE / "cases").glob("HHG-*.json")):
     if llm:
         shutil.copy(llm_fp, DST / llm_fp.name)
     c, case = d["case"], llm["case"] if llm else {}
+    trace_fp = BASE / "cases" / f"{cid}.trace.jsonl"
+    has_trace = trace_fp.exists()
+    if has_trace:
+        shutil.copy(trace_fp, DST / trace_fp.name)
     index.append({
         "case_id": cid,
+        "has_trace": has_trace,
         "rule": {"verdict": c["verdict"], "p": c["fraud_probability"],
                  "pattern": c["pattern"], "exposure": c["exposure_usd"],
                  "sar": d["sar"]["file"]},

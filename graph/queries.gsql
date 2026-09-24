@@ -1,0 +1,24 @@
+// HHGOA_Fraud installed queries: traversal + pattern detection server-side.
+// Installed by: python scripts/install_queries.py (one CREATE QUERY per call).
+
+// --- card_window: all transactions made with a card (replaces client-side sort of full neighbor lists)
+CREATE QUERY card_window(VERTEX<Card> card) FOR GRAPH HHGOA_Fraud {
+  Txns = SELECT t FROM {card}:s -(MADE:e)- Transaction:t;
+  PRINT Txns;
+}
+
+// --- device_cards: cards sharing a device profile via their transactions (R6 ring walk, 2 hops)
+CREATE QUERY device_cards(VERTEX<DeviceProfile> dev) FOR GRAPH HHGOA_Fraud {
+  Txns = SELECT t FROM {dev}:s -(FROM_DEVICE:e)- Transaction:t;
+  Cards = SELECT c FROM Txns:t -(MADE:e)- Card:c;
+  PRINT Cards;
+  PRINT Txns;
+}
+
+// --- case_memory: closed cases with a given pattern + linked cards (graph-traversal memory)
+CREATE QUERY case_memory(STRING pat) FOR GRAPH HHGOA_Fraud {
+  Cases = SELECT c FROM ClosedCase:c WHERE c.pattern == pat LIMIT 50;
+  Cards = SELECT card FROM Cases:cc -(ON_CARD:e)- Card:card;
+  PRINT Cases;
+  PRINT Cards;
+}

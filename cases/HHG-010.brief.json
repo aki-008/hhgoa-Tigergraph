@@ -80,8 +80,35 @@
     "shared_device_cards": []
   },
   "similar_prior_cases": [
-    "CC-0001",
-    "CC-0007",
-    "CC-0012"
+    "CC-0086",
+    "CC-0284",
+    "CC-0257"
+  ],
+  "grounded_memory": [
+    {
+      "case": "CC-1000",
+      "label": "cleared/none",
+      "note": "none cleared exposure 0.00 Case CC-1000: model scored a $150.01 transaction at 0.85. Cardholder confirmed the purchase from a new phone. Device added to profile. Alert cleared."
+    },
+    {
+      "case": "CC-3501",
+      "label": "confirmed_fraud/card_not_present_new_device",
+      "note": "card_not_present_new_device confirmed_fraud exposure 1000.11 Case CC-3501: cardholder C05704 reported unrecognized activity on card C05704-K2. 6 transaction(s) between 2016-09-14 and 2016-09-15 totaling $1,000.11 were confirmed fraudulent. Online purchases from a device not previously seen on this a"
+    },
+    {
+      "case": "CC-1750",
+      "label": "confirmed_fraud/card_not_present_new_device",
+      "note": "card_not_present_new_device confirmed_fraud exposure 1000.21 Case CC-1750: cardholder C01154 reported unrecognized activity on card C01154-K1. 4 transaction(s) between 2016-08-04 and 2016-08-04 totaling $1,000.21 were confirmed fraudulent. Online purchases from a device not previously seen on this a"
+    }
+  ],
+  "grounded_policy": [
+    {
+      "rule": "P3",
+      "text": "3. Card-not-present fraud from a new device.** Same as above, with the identity record marking the device as `New` for this account, sometimes behind a proxy. Stronger than pattern 2, still not proof: people buy new phones."
+    },
+    {
+      "rule": "P4",
+      "text": "4. Out-of-region use.** Card-present purchases in a billing region the cardholder has no history in, while their normal activity continues at home. Several days of purchases in one new region is a trip, not a clone. Policy R2, R3."
+    }
   ]
 }

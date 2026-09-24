@@ -3,10 +3,11 @@
   import Overview from "./lib/Overview.svelte";
   import CaseDetail from "./lib/CaseDetail.svelte";
   import Compare from "./lib/Compare.svelte";
+  import LiveRun from "./lib/LiveRun.svelte";
 
   let index = $state([]);
   let error = $state("");
-  let tab = $state("overview"); // overview | case | compare
+  let tab = $state("overview"); // overview | case | compare | live
   let caseId = $state("HHG-002");
   let variant = $state("rule"); // rule | llm
 
@@ -26,6 +27,7 @@
       <button class:active={tab === "overview"} onclick={() => (tab = "overview")}>Overview</button>
       <button class:active={tab === "case"} onclick={() => (tab = "case")}>Case</button>
       <button class:active={tab === "compare"} onclick={() => (tab = "compare")}>Rule vs LLM</button>
+      <button class:active={tab === "live"} onclick={() => (tab = "live")}>Live run</button>
     </nav>
   </header>
 
@@ -52,6 +54,15 @@
 
   {#if tab === "compare" && index.length}
     <Compare {index} />
+  {/if}
+
+  {#if tab === "live" && index.length}
+    <div class="toolbar">
+      <select bind:value={caseId}>
+        {#each index as c}<option value={c.case_id}>{c.case_id}</option>{/each}
+      </select>
+    </div>
+    {#key caseId}<LiveRun {caseId} />{/key}
   {/if}
 </main>
 

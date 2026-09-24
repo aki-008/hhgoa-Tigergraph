@@ -94,5 +94,5 @@
   "stop_reason": "Stopping at p=0.15: decision supported by pattern evidence.",
   "tool_calls": 5,
   "tokens": 0,
-  "latency_s": 2.7
+  "latency_s": 4.5
 }

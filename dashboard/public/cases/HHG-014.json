@@ -39,16 +39,28 @@
         ]
       },
       {
-        "claim": "Customer no reply within 24h on validation request",
+        "claim": "Customer denied the transaction on validation request",
         "source": "customer",
         "ref": "evidence_request:1",
+        "entity_ids": []
+      },
+      {
+        "claim": "Step-up authentication failed",
+        "source": "customer",
+        "ref": "evidence_request:2",
+        "entity_ids": []
+      },
+      {
+        "claim": "Desk notes anonymizer IP; no cross-card link in current sample.",
+        "source": "analyst",
+        "ref": "evidence_request:analyst",
         "entity_ids": []
       }
     ],
     "similar_prior_cases": [
-      "CC-0011",
-      "CC-0018",
-      "CC-0019"
+      "CC-0073",
+      "CC-0232",
+      "CC-0521"
     ],
     "summary": "analyst_request on card C13487-K1: burst of 3 within 48h; new device for account; proxy/anonymizer.",
     "written_to_graph": true,
@@ -58,7 +70,7 @@
     {
       "type": "customer_validation",
       "asked_after_step": 4,
-      "assumed_response": "Customer did not respond about the $74.96 transaction of 2016-11-22 16:11:00"
+      "assumed_response": "Customer denied the $74.96 transaction of 2016-11-22 16:11:00 (mock responder)"
     }
   ],
   "next_best_actions": {
@@ -91,7 +103,7 @@
         "reason": "R4: pending auths"
       }
     ],
-    "what_changed": "Customer response moved p and finalized block/monitor path under R2/R4."
+    "what_changed": "Evidence (denied) finalized the path under R2/R3/R4."
   },
   "sar": {
     "file": false,
@@ -101,8 +113,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Stopping at p=0.52: verification pending under R1.",
-  "tool_calls": 6,
+  "stop_reason": "Verification response settles the question.",
+  "tool_calls": 7,
   "tokens": 0,
-  "latency_s": 3.0
+  "latency_s": 4.6
 }

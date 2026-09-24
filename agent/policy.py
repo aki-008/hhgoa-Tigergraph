@@ -152,3 +152,19 @@ def decide(case, f):
         verdict, p, pattern, pdesc, exposure, initial, assumed, final = r7
     return verdict, p, pattern, pdesc, signals, exposure, initial, assumed, final
 
+
+
+def trigger_shared(case):
+    return case["trigger_type"] == "analyst_request"
+
+
+def sar_narrative(case, f, verdict, pattern, exposure):
+    new = ("Device profile marked new for the account. " if f["new_device"] else "")
+    return (
+        "On %s, card %s of customer %s was used for a $%.2f %s transaction "
+        "(product code %s, risk score %.2f). The amount is %.1fx the card's prior maximum "
+        "($%.2f), inconsistent with established history. %sThe cardholder denied the "
+        "activity when contacted. Total exposure $%.2f. Card blocked pending reissue." % (
+            f.get("ts", ""), case["card_id"], case["customer_id"], f["amount"],
+            f["channel"], f["product_cd"], f["risk_score"], f["amount_ratio"],
+            f["prior_max"], new, exposure))

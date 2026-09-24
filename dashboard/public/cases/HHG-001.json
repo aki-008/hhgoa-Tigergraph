@@ -29,9 +29,15 @@
         ]
       },
       {
-        "claim": "Customer no reply within 24h on validation request",
+        "claim": "Customer confirmed the transaction on validation request",
         "source": "customer",
         "ref": "evidence_request:1",
+        "entity_ids": []
+      },
+      {
+        "claim": "Step-up authentication passed",
+        "source": "customer",
+        "ref": "evidence_request:2",
         "entity_ids": []
       }
     ],
@@ -48,7 +54,7 @@
     {
       "type": "customer_validation",
       "asked_after_step": 4,
-      "assumed_response": "Customer did not respond about the $77.07 transaction of 2016-12-04 19:55:28"
+      "assumed_response": "Customer confirmed the $77.07 transaction of 2016-12-04 19:55:28 (mock responder)"
     }
   ],
   "next_best_actions": {
@@ -81,7 +87,7 @@
         "reason": "R4: pending auths"
       }
     ],
-    "what_changed": "Customer response moved p and finalized block/monitor path under R2/R4."
+    "what_changed": "Evidence (confirmed) finalized the path under R2/R3/R4."
   },
   "sar": {
     "file": false,
@@ -91,8 +97,8 @@
     "total_amount_usd": 0,
     "activity_dates": []
   },
-  "stop_reason": "Stopping at p=0.15: decision supported by pattern evidence.",
+  "stop_reason": "Verification response settles the question.",
   "tool_calls": 5,
   "tokens": 0,
-  "latency_s": 3.9
+  "latency_s": 4.3
 }

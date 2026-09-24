@@ -7,22 +7,40 @@ from dotenv import dotenv_values
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 from . import BASE, GRAPH
-from .evidence import card_history_from_csv, read_case_pack, similar_closed
+from .casefile import CaseFile
+from .evidence import card_history_from_csv, read_case_pack
+from .execution import execute as exec_action
+from .execution import mock_analyst_info, mock_customer_validation, mock_step_up_auth
 from .features import build_features
-from .policy import decide
+from .memory import ring_walk, similar_cases_graph
+from .policy import decide, sar_narrative, trigger_shared
 from .retrieval import graph_txn_edges, graph_window, mcp_call, shared_device_cards
+from .trace import Tracer
+from .triggers import describe as describe_trigger
+from .triggers import intake_plan
 # ---------------------------------------------------------------- main per case
 
-async def investigate(s, case_id, tool_calls):
+async def investigate(s, case_id, tool_calls, live_trace=True, out_dir="cases"):
+    """Staged flow: trigger -> investigate -> evidence -> assess ->
+    more-evidence -> act -> explain -> memorize. Output schema unchanged."""
     t0 = time.time()
     case = read_case_pack()[case_id]
     card_id, customer_id = case["card_id"], case["customer_id"]
+    tracer = Tracer(case_id, live=live_trace, out_dir=out_dir)
+    cf = CaseFile(case_id, case.get("trigger_type", ""))
 
     async def call(name, args):
         tool_calls[0] += 1
+        tracer.log("retrieve", f"tool:{name}", {"tool": name})
         return await mcp_call(s, name, args)
 
-    # 1. graph window, fallback CSV
+    # 1. trigger: intake plan per trigger kind
+    plan, notes = intake_plan(case)
+    tracer.log("trigger", describe_trigger(case),
+               {"plan": [p["step"] for p in plan], "notes": notes})
+    cf.transition("investigating", "intake plan ready")
+
+    # 2-3. investigate + gather: graph window, fallback CSV
     try:
         window = await graph_window(call, card_id)
         src_window = "graph"
@@ -31,6 +49,8 @@ async def investigate(s, case_id, tool_calls):
     except Exception:  # noqa: BLE001
         window = card_history_from_csv(customer_id)
         src_window = "csv"
+    tracer.log("retrieve", f"card_window: {len(window)} txns ({src_window})",
+               {"n": len(window), "src": src_window})
     flagged = next((t for t in window
                     if str(t.get("TransactionID")) == str(case["flagged_txn_id"])), None)
     if flagged is None:  # flagged outside window: fetch node + csv row
@@ -56,13 +76,43 @@ async def investigate(s, case_id, tool_calls):
     f, burst = build_features(case, window, flagged)
     edges = await graph_txn_edges(call, case["flagged_txn_id"])
     edge_types = sorted({e.get("e_type", "") for e in edges if isinstance(e, dict)})
-    f["shared_cards"] = await shared_device_cards(call, f.get("device_str", ""), card_id)
+    try:
+        f["shared_cards"], _ring_txns = await ring_walk(call, f.get("device_str", ""), card_id)
+        tracer.log("traverse", f"ring walk: {len(f["shared_cards"])} other cards",
+                   {"cards": f["shared_cards"]})
+    except Exception:  # noqa: BLE001
+        f["shared_cards"] = await shared_device_cards(call, f.get("device_str", ""), card_id)
+    tracer.log("retrieve", "txn links + shared-device sweep",
+               {"edge_types": edge_types, "shared_cards": f["shared_cards"]})
 
+    # 4. assess
     verdict, p, pattern, pdesc, signals, exposure, initial, assumed, final = decide(case, f)
+    if (verdict != "fraud"
+            and any(a["action"] == "BLOCK_CARD" for a in final)):
+        # Uncorroborated denial: single weak signal -> verify before block (R1),
+        # not the R2 block path. (R7 recurring cases never carry BLOCK here.)
+        initial = [
+            {"action": "VERIFY_WITH_CUSTOMER", "route": "auto",
+             "reason": "R1: uncorroborated denial, confirm before block"},
+            {"action": "STEP_UP_AUTH", "route": "auto", "reason": "R1"},
+            {"action": "MONITOR_CARD", "route": "auto", "reason": "R4: watch pending"}]
+        final = initial
+        assumed = {"type": "customer_validation", "response": "no reply within 24h"}
+        signals.append("denial uncorroborated: verify-first per R1, no block")
+        cf_note = "downgrade: R1 verify-first (was R2 block)"
+    else:
+        cf_note = None
+    cf.set_risk(p, pattern)
+    cf.record(f"assess: {verdict} p={p} pattern={pattern}",
+              "; ".join(signals) or "single weak signal", "features")
+    tracer.log("assess", f"{verdict} p={p} pattern={pattern}",
+               {"signals": signals, "exposure": exposure})
 
     # similar prior cases (memory)
-    mem = similar_closed(pattern if pattern not in ("none", "undocumented") else
-                         "card_not_present_fraud")
+    mem = await similar_cases_graph(
+        call, pattern if pattern not in ("none", "undocumented") else
+        "card_not_present_fraud")
+    tracer.log("memory", f"{len(mem)} similar prior cases", {"cases": mem})
 
     evidence = [
         {"claim": f"Flagged ${f['amount']:.2f} {f['channel']} txn (risk {f['risk_score']}) vs "
@@ -84,22 +134,58 @@ async def investigate(s, case_id, tool_calls):
             f["device_str"], " (New for account)" if f["new_device"] else ""),
             "source": "graph", "ref": "query:txn_device",
             "entity_ids": [str(case["flagged_txn_id"])]})
-    if assumed:
-        evidence.append({"claim": "Customer %s on validation request" % assumed["response"],
-                         "source": "customer", "ref": "evidence_request:1", "entity_ids": []})
+    for e in evidence:
+        cf.add_evidence(e["claim"], e["source"], e["ref"], e["entity_ids"])
 
+    # 5. more evidence if needed: mock responders (deterministic, simulated)
     ereqs = []
-    if assumed:
+    reply = None
+    if assumed and assumed.get("type") == "customer_validation":
+        cf.transition("pending_evidence", "verification requested")
+        reply = mock_customer_validation(case, f)
+        tracer.log("evidence_request", f"customer_validation -> {reply}",
+                   {"assumed": assumed.get("response")})
+        evidence.append({"claim": f"Customer {reply} the transaction on validation request",
+                         "source": "customer", "ref": "evidence_request:1", "entity_ids": []})
+        cf.add_evidence(evidence[-1]["claim"], "customer", "evidence_request:1", [])
         ereqs = [{"type": "customer_validation", "asked_after_step": 4,
-                  "assumed_response": "Customer %s the $%.2f transaction of %s" % (
-                      ("denied" if "denied" in assumed["response"] else
-                       "did not respond about"), f["amount"], flagged.get("ts", ""))}]
+                  "assumed_response": "Customer %s the $%.2f transaction of %s (mock responder)" % (
+                      reply, f["amount"], flagged.get("ts", ""))}]
+        if any(a["action"] == "STEP_UP_AUTH" for a in initial):
+            su = mock_step_up_auth(reply)
+            tracer.log("evidence_request", f"step_up_auth -> {su}", {})
+            evidence.append({"claim": f"Step-up authentication {su}",
+                             "source": "customer", "ref": "evidence_request:2", "entity_ids": []})
+        if reply == "confirmed" and verdict != "legitimate":
+            # R3: confirmation settles it as legitimate
+            verdict, p = "legitimate", min(p, 0.15)
+            cf.set_risk(p, pattern)
+            cf.record("R3: customer confirmed", "verification reply", "R3")
+            final = [{"action": "CLOSE_NO_FRAUD", "route": "auto", "reason": "R3: confirmed"},
+                     {"action": "GENERATE_REPORT", "route": "auto", "reason": "R3: record"}]
+            initial = final
+        cf.transition("investigating", f"evidence received: {reply}")
+    if case.get("trigger_type") == "analyst_request":
+        info = mock_analyst_info(case, f)
+        tracer.log("evidence_request", f"analyst_info -> {info[:120]}", {})
+        evidence.append({"claim": info, "source": "analyst",
+                         "ref": "evidence_request:analyst", "entity_ids": []})
+        cf.add_evidence(info, "analyst", "evidence_request:analyst", [])
+
+    # 6. act: simulated execution with approval routing
+    cf.transition("actioned", "final actions selected")
+    for a in final:
+        exec_action(a["action"], a["route"], cf, tracer, exposure)
+    for a in initial:
+        if a not in final:
+            cf.record(f"initially considered {a['action']}", a["reason"], "superseded")
 
     file_report = any(a["action"] == "FILE_REPORT" for a in final)
     if verdict == "fraud" and (exposure > 1000 or f["new_device"] or f["testing_seq"] or
                                trigger_shared(case)) and not file_report:
         final.append({"action": "FILE_REPORT", "route": "L2",
                       "reason": "R2/R6: exposure/linkage"})
+        exec_action("FILE_REPORT", "L2", cf, tracer, exposure)
         file_report = True
 
     sar = {"file": file_report,
@@ -118,10 +204,13 @@ async def investigate(s, case_id, tool_calls):
     affected = [str(case["flagged_txn_id"])] if verdict != "legitimate" else []
     if f["testing_seq"] and verdict == "fraud":
         affected = f["testing_seq"]
-    status = {"fraud": "closed_fraud", "legitimate": "closed_legitimate",
-              "uncertain": "open"}[verdict]
+    terminal = {"fraud": "closed_fraud", "legitimate": "closed_legitimate"}.get(verdict, "open")
+    if any(a["action"] == "ESCALATE_TO_ANALYST" for a in final) and verdict == "uncertain":
+        terminal = "escalated"
+    status = terminal
+    cf.transition(terminal, f"verdict={verdict}")
 
-    # write-back (case memory)
+    # 8. memorize: write-back (case memory)
     try:
         await call("tigergraph__add_node", {"graph_name": GRAPH, "vertex_type": "ClosedCase",
                    "vertex_id": case_id, "attributes": {
@@ -141,9 +230,13 @@ async def investigate(s, case_id, tool_calls):
         written, gid = True, case_id
     except Exception:  # noqa: BLE001
         written, gid = False, ""
+    tracer.log("memorize", f"case write-back written={written}", {"graph_case_id": gid})
 
-    what_changed = ("nothing" if not assumed else
-                    "Customer response moved p and finalized block/monitor path under R2/R4.")
+    # 7. explain
+    what_changed = ("nothing" if not ereqs else
+                    f"Evidence ({reply}) finalized the path under R2/R3/R4.")
+    cf.record(f"explain: {what_changed}", f"stop: {verdict} p={p}", "summary")
+    tracer.log("done", f"{verdict} p={p}", tracer.totals())
     out = {
         "case_id": case_id,
         "case": {
@@ -163,37 +256,19 @@ async def investigate(s, case_id, tool_calls):
         "next_best_actions": {"initial": initial, "final": final,
                               "what_changed": what_changed},
         "sar": sar,
-        "stop_reason": ("Verification response settles the question." if assumed and
-                        "denied" in assumed["response"] else
+        "stop_reason": ("Verification response settles the question." if reply in ("denied", "confirmed") else
                         "Stopping at p=%.2f: %s." % (
                             p, "verification pending under R1" if verdict == "uncertain"
                             else "decision supported by pattern evidence")),
         "tool_calls": tool_calls[0], "tokens": 0,
         "latency_s": round(time.time() - t0, 1)}
-    (BASE / "cases").mkdir(exist_ok=True)
-    with open(BASE / "cases" / f"{case_id}.json", "w", encoding="utf-8") as fh:
+    (BASE / out_dir).mkdir(parents=True, exist_ok=True)
+    with open(BASE / out_dir / f"{case_id}.json", "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=2)
     return out
 
 
-def trigger_shared(case):
-    return case["trigger_type"] == "analyst_request"
-
-
-def sar_narrative(case, f, verdict, pattern, exposure):
-    return (
-        "On %s, card %s of customer %s was used for a $%.2f %s transaction "
-        "(product code %s, risk score %.2f). The amount is %.1fx the card's prior maximum "
-        "($%.2f), inconsistent with established history. %s The cardholder denied the "
-        "activity when contacted. Total exposure $%.2f. Card blocked pending reissue." % (
-            f.get("ts", ""), case["card_id"], case["customer_id"], f["amount"],
-            f["channel"], f["product_cd"], f["risk_score"], f["amount_ratio"],
-            f["prior_max"],
-            ("Device profile marked new for the account. " if f["new_device"] else ""),
-            exposure))
-
-
-async def main(cases):
+async def main(cases, out_dir="cases"):
     env_vals = {k: v for k, v in dotenv_values(BASE / ".env").items() if v}
     sp = StdioServerParameters(command="tigergraph-mcp", args=["-v"],
                                env={**get_default_environment(), **env_vals})
@@ -203,7 +278,7 @@ async def main(cases):
             for cid in cases:
                 tc = [0]
                 try:
-                    out = await investigate(s, cid, tc)
+                    out = await investigate(s, cid, tc, out_dir=out_dir)
                     print(f"{cid}: {out['case']['verdict']} p={out['case']['fraud_probability']} "
                           f"pattern={out['case']['pattern']} tools={tc[0]}")
                 except Exception as e:  # noqa: BLE001
@@ -216,6 +291,8 @@ if __name__ == "__main__":
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--skip", default="",
                     help="comma-separated case_ids to skip (e.g. HHG-002 already done)")
+    ap.add_argument("--out-dir", default="cases",
+                    help="output directory for answer JSON + traces (e.g. cases/run_20260924)")
     a = ap.parse_args()
     pack = read_case_pack()
     if a.all:
@@ -223,4 +300,4 @@ if __name__ == "__main__":
         targets = [c for c in sorted(pack) if c not in skip]
     else:
         targets = [a.case or "HHG-001"]
-    asyncio.run(main(targets))
+    asyncio.run(main(targets, out_dir=a.out_dir))

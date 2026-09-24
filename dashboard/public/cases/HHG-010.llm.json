@@ -1,7 +1,7 @@
 {
   "case_id": "HHG-010",
   "case": {
-    "status": "open",
+    "status": "escalated",
     "verdict": "uncertain",
     "fraud_probability": 0.65,
     "pattern": "card_not_present_new_device",
@@ -55,7 +55,7 @@
         ]
       },
       {
-        "claim": "Risk score is high at 0.90, triggering review.",
+        "claim": "Risk score of 0.90 indicates high anomaly but is not a verdict.",
         "source": "graph",
         "ref": "llm:evidence_brief",
         "entity_ids": [
@@ -126,6 +126,6 @@
   },
   "stop_reason": "LLM verdict with policy validation.",
   "tool_calls": 2,
-  "tokens": 0,
-  "latency_s": 22.0
+  "tokens": 1169,
+  "latency_s": 38.3
 }

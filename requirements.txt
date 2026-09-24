@@ -1,0 +1,6 @@
+# Python deps (tested on Python 3.13). Install: pip install -r requirements.txt
+tigergraph-mcp>=1.0.3   # TigerGraph MCP server (also pulls pyTigerGraph, mcp, python-dotenv)
+mcp>=2.2.0              # MCP SDK (stdio client used by agent scripts)
+python-dotenv>=1.1.0    # .env loading
+groq>=1.7.0             # LLM provider for scripts/llm_investigate.py (optional; rule path needs none)
+scikit-learn>=1.9.1     # TF-IDF grounding in agent/grounding.py (GraphRAG text backend)

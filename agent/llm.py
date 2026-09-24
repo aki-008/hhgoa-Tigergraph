@@ -28,6 +28,14 @@ def call_llm(cfg, system, user, max_tokens=400):
         return chat_once(cfg, system, user, max_tokens=max_tokens)
 
 
+def _record_usage(cfg, prompt_tokens, completion_tokens):
+    u = cfg.setdefault("usage_total", {"prompt": 0, "completion": 0})
+    u["prompt"] += prompt_tokens or 0
+    u["completion"] += completion_tokens or 0
+    cfg["last_usage"] = {"prompt": prompt_tokens or 0,
+                         "completion": completion_tokens or 0}
+
+
 def llm_config(args):
     env = dotenv_values(BASE / ".env")
     groq_key = env.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") or ""
@@ -57,14 +65,24 @@ def _groq_client(cfg):
 def chat(cfg, system, user, max_tokens=400):
     """Streaming chat. Returns full text."""
     if cfg.get("provider") == "groq":
-        client = _groq_client(cfg)
+        from groq import Groq as _Groq
+        client = _Groq(api_key=cfg["api_key"])
         completion = client.chat.completions.create(
             model=cfg["model"],
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
             temperature=0.2, max_completion_tokens=max_tokens, top_p=0.95,
             stream=True)
-        return "".join(chunk.choices[0].delta.content or "" for chunk in completion)
+        chunks = []
+        usage = None
+        for chunk in completion:
+            chunks.append(chunk.choices[0].delta.content or "")
+            if getattr(chunk, "usage", None):
+                usage = chunk.usage
+        if usage is not None:
+            _record_usage(cfg, getattr(usage, "prompt_tokens", 0),
+                          getattr(usage, "completion_tokens", 0))
+        return "".join(chunks)
     body = json.dumps({"model": cfg["model"],
                        "messages": [{"role": "system", "content": system},
                                     {"role": "user", "content": user}],
@@ -97,13 +115,18 @@ def chat(cfg, system, user, max_tokens=400):
 def chat_once(cfg, system, user, max_tokens=400):
     """Non-streaming fallback."""
     if cfg.get("provider") == "groq":
-        client = _groq_client(cfg)
+        from groq import Groq as _Groq
+        client = _Groq(api_key=cfg["api_key"])
         completion = client.chat.completions.create(
             model=cfg["model"],
             messages=[{"role": "system", "content": system},
                       {"role": "user", "content": user}],
             temperature=0.2, max_completion_tokens=max_tokens, top_p=0.95,
             stream=False)
+        usage = getattr(completion, "usage", None)
+        if usage is not None:
+            _record_usage(cfg, getattr(usage, "prompt_tokens", 0),
+                          getattr(usage, "completion_tokens", 0))
         return completion.choices[0].message.content or ""
     body = json.dumps({"model": cfg["model"],
                        "messages": [{"role": "system", "content": system},
@@ -123,7 +146,7 @@ def chat_once(cfg, system, user, max_tokens=400):
 def build_brief(case, window, flagged, f, mem):
     prior = [t for t in window if str(t.get("TransactionID")) != str(case["flagged_txn_id"])]
     recent = sorted(prior, key=lambda t: str(t.get("ts", "")))[-8:]
-    return {
+    brief = {
         "case_id": case["case_id"], "trigger": case["trigger_type"],
         "trigger_text": case["trigger_text"],
         "flagged": {"txn_id": str(case["flagged_txn_id"]), "amount": f["amount"],
@@ -144,6 +167,19 @@ def build_brief(case, window, flagged, f, mem):
                     "shared_device_cards": f.get("shared_cards", [])},
         "similar_prior_cases": mem,
     }
+    # GraphRAG grounding: relevant past cases + policy excerpts, not raw rows
+    try:
+        from .grounding import brief_query_text, retrieve
+        g = retrieve(brief_query_text(brief))
+        brief["grounded_memory"] = [
+            {"case": c["id"], "label": c["label"], "note": c["text"][:300]}
+            for c in g["cases"]]
+        brief["grounded_policy"] = [
+            {"rule": p["id"], "text": p["text"][:300]} for p in g["policy"]]
+    except Exception:  # noqa: BLE001 - grounding is additive, never fatal
+        brief["grounded_memory"] = []
+        brief["grounded_policy"] = []
+    return brief
 
 
 def validate_llm(case, llm, txns):

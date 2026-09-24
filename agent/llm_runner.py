@@ -7,24 +7,46 @@ from dotenv import dotenv_values
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 from . import BASE, GRAPH
+from .casefile import CaseFile
 from .evidence import card_history_from_csv, read_case_pack, similar_closed
+from .execution import execute as exec_action
 from .features import build_features
 from .llm import (NARR_SYSTEM, SYSTEM, build_brief, call_llm, llm_config,
                  validate_llm)
 from .policy import decide
 from .retrieval import (graph_window, mcp_call, shared_device_cards)
+from .memory import ring_walk, similar_cases_graph
+from .trace import Tracer
+from .triggers import describe as describe_trigger
+from .triggers import intake_plan
 
 PILOT = ["HHG-014", "HHG-010", "HHG-003"]
-async def run_case(s, cfg, case_id, brief_only=False):
+
+
+def _usage(cfg):
+    u = cfg.pop("last_usage", None) or {}
+    return int(u.get("prompt", 0)), int(u.get("completion", 0))
+
+
+async def run_case(s, cfg, case_id, brief_only=False, out_dir="cases"):
     t0 = time.time()
     tc = [0]
 
     async def call(name, args):
         tc[0] += 1
+        tracer.log("retrieve", f"tool:{name}", {"tool": name})
         return await mcp_call(s, name, args)
 
     case = read_case_pack()[case_id]
     card_id, customer_id = case["card_id"], case["customer_id"]
+    cfg["usage_total"] = {"prompt": 0, "completion": 0}  # per-case token budget
+    cfg.pop("last_usage", None)
+    tracer = Tracer(case_id + ".llm", out_dir=out_dir)
+    cf = CaseFile(case_id, case.get("trigger_type", ""))
+    plan, notes = intake_plan(case)
+    tracer.log("trigger", describe_trigger(case),
+               {"plan": [p["step"] for p in plan], "notes": notes})
+    cf.transition("investigating", "intake plan ready")
     try:
         window = await graph_window(call, card_id)
         if not window:
@@ -37,12 +59,18 @@ async def run_case(s, cfg, case_id, brief_only=False):
         flagged = next((t for t in card_history_from_csv(customer_id)
                         if str(t.get("TransactionID")) == str(case["flagged_txn_id"])), None)
     f, _ = build_features(case, window, flagged)
-    f["shared_cards"] = await shared_device_cards(call, f.get("device_str", ""), card_id)
-    mem = similar_closed("card_not_present_fraud")
+    try:
+        f["shared_cards"], _ring_txns = await ring_walk(call, f.get("device_str", ""), card_id)
+        tracer.log("traverse", f"ring walk: {len(f["shared_cards"])} other cards",
+                   {"cards": f["shared_cards"]})
+    except Exception:  # noqa: BLE001
+        f["shared_cards"] = await shared_device_cards(call, f.get("device_str", ""), card_id)
+    mem = await similar_cases_graph(call, "card_not_present_fraud")
     brief = build_brief(case, window, flagged, f, mem)
 
     if brief_only:
-        out = BASE / "cases" / f"{case_id}.brief.json"
+        out = BASE / out_dir / f"{case_id}.brief.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(brief, indent=2), encoding="utf-8")
         print(f"{case_id}: brief written ({len(json.dumps(brief))} chars, tools={tc[0]})")
         return {"case_id": case_id, "brief": brief}
@@ -56,12 +84,52 @@ async def run_case(s, cfg, case_id, brief_only=False):
     txns = {r["TransactionID"] for r in
             card_history_from_csv(customer_id)} | {str(case["flagged_txn_id"])}
     llm, problems = validate_llm(case, parsed, txns)
+    # Laya advisory decision (System 1 classifier; gated, never sole decider)
+    try:
+        from .laya_decide import decide_case as laya_decide_case
+        from .laya_decide import laya_config as laya_cfg
+        from .laya_decide import slim_state as laya_state
+        laya_res = laya_decide_case(laya_cfg(), laya_state(case, flagged, f))
+        laya_ok = True
+    except Exception as e:  # noqa: BLE001 - advisory only
+        laya_res = {}
+        problems.append(f"laya unavailable: {type(e).__name__}")
+        laya_ok = False
+    laya_notes = []
+    if laya_ok:
+        tracer.log("laya_decide",
+                   f"pattern={laya_res['pattern']} p={laya_res['p_fraud']:.3f} "
+                   f"(conf {laya_res['pattern_conf']:.2f})",
+                   laya_res)
+        laya_notes.append("laya: pattern=%s p=%.3f conf=%.2f" % (
+            laya_res["pattern"], laya_res["p_fraud"], laya_res["pattern_conf"]))
+        if laya_res["pattern_conf"] >= 0.85 and laya_res["pattern"] in (
+                "card_testing", "card_not_present_fraud",
+                "card_not_present_new_device", "out_of_region_use",
+                "account_takeover"):
+            laya_pick = laya_res["pattern"]  # applied after LLM adoption below
+            tracer.log("laya_gate", f"pattern {laya_pick} gated for adoption at conf "
+                       f"{laya_res['pattern_conf']:.2f}", {})
+        else:
+            laya_pick = None
+    usage = cfg.get("usage_total", {"prompt": 0, "completion": 0})
+    cf.set_risk(llm.get("fraud_probability", 0.5), llm.get("pattern", "none"))
+    cf.record("llm judge: %s p=%s pattern=%s" % (
+        llm.get("verdict"), llm.get("fraud_probability"), llm.get("pattern")),
+        "; ".join(llm.get("key_signals", [])[:3]) or "no signals", "llm")
+    tracer.log("llm_judge", "LLM verdict %s (validation: %s)" % (
+        llm.get("verdict"), problems or "clean"),
+        {"model": cfg.get("model")}, prompt_tokens=usage["prompt"],
+        completion_tokens=usage["completion"])
 
     # policy guardrails (deterministic): actions always from the engine
     verdict, p, pattern, pdesc, signals, exposure, initial, assumed, final = \
         decide(case, f)
     # adopt LLM judgment where it passes validation, keep engine for actions
     verdict, p, pattern = llm["verdict"], llm["fraud_probability"], llm["pattern"]
+    if laya_ok and laya_pick and llm["pattern"] in ("none",):
+        pattern = laya_pick  # gated Laya pattern fills an LLM abstention
+        signals.append(f"laya gated pattern adoption: {laya_pick}")
     if llm["pattern"] == "undocumented":
         pdesc = llm.get("pattern_description", "")
     # R2 uplift: denial + corroboration scored as fraud even if LLM hedges
@@ -74,6 +142,12 @@ async def run_case(s, cfg, case_id, brief_only=False):
     for sig in llm.get("key_signals", [])[:6]:
         if sig and sig not in signals:
             signals.append(str(sig)[:200])
+    signals.extend(s for s in laya_notes if s not in signals)
+    # laya advisory leads the evidence trail (visible, capped slice below)
+    for s in reversed(laya_notes):
+        if s in signals:
+            signals.remove(s)
+            signals.insert(0, s)
 
     # rebuild actions consistent with LLM verdict (engine rules, R1/R7/R10 enforced)
     if verdict == "legitimate" and not (
@@ -131,12 +205,28 @@ async def run_case(s, cfg, case_id, brief_only=False):
            "subjects": [customer_id, card_id] if file_report else [],
            "total_amount_usd": exposure if file_report else 0,
            "activity_dates": ([str(flagged.get("ts", ""))[:10]] * 2) if file_report else []}
+    if ereqs:
+        cf.transition("pending_evidence", "verification requested")
+        cf.transition("investigating", "mock evidence received")
+    cf.transition("actioned", "final actions selected")
+    for a in final:
+        exec_action(a["action"], a["route"], cf, tracer, exposure)
     affected = [str(case["flagged_txn_id"])] if verdict != "legitimate" else []
+    terminal = {"fraud": "closed_fraud", "legitimate": "closed_legitimate"}.get(
+        verdict, "open")
+    if any(a["action"] == "ESCALATE_TO_ANALYST" for a in final) and verdict == "uncertain":
+        terminal = "escalated"
+    cf.transition(terminal, f"verdict={verdict}")
+    tracer.log("memorize", "llm path: no graph write-back (rule files canonical)",
+               {"written": False})
+    usage = cfg.get("usage_total", {"prompt": 0, "completion": 0})
+    cf.record(f"explain: LLM + guardrails -> {verdict}", f"stop: {verdict}", "summary")
+    tracer.log("done", f"{verdict} p={p}",
+               tracer.totals() | {"llm_tokens": usage["prompt"] + usage["completion"]})
     out = {
         "case_id": case_id,
         "case": {
-            "status": {"fraud": "closed_fraud", "legitimate": "closed_legitimate",
-                       "uncertain": "open"}[verdict],
+            "status": terminal,
             "verdict": verdict, "fraud_probability": p, "pattern": pattern,
             "pattern_description": pdesc if pattern == "undocumented" else "",
             "affected_txn_ids": affected,
@@ -161,16 +251,17 @@ async def run_case(s, cfg, case_id, brief_only=False):
         "sar": sar,
         "stop_reason": "LLM verdict with policy validation%s." % (
             "; validation notes: %s" % "; ".join(problems) if problems else ""),
-        "tool_calls": tc[0], "tokens": 0, "latency_s": round(time.time() - t0, 1)}
-    (BASE / "cases").mkdir(exist_ok=True)
-    with open(BASE / "cases" / f"{case_id}.llm.json", "w", encoding="utf-8") as fh:
+        "tool_calls": tc[0], "tokens": usage["prompt"] + usage["completion"],
+        "latency_s": round(time.time() - t0, 1)}
+    (BASE / out_dir).mkdir(parents=True, exist_ok=True)
+    with open(BASE / out_dir / f"{case_id}.llm.json", "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=2)
     print(f"{case_id}: LLM {verdict} p={p} pattern={pattern} "
           f"problems={problems or 'none'} tools={tc[0]}")
     return out
 
 
-async def main(cases, cfg, brief_only):
+async def main(cases, cfg, brief_only, out_dir="cases"):
     from dotenv import dotenv_values as _dv  # local import to keep top tidy
     env_vals = {k: v for k, v in _dv(BASE / ".env").items() if v}
     sp = StdioServerParameters(command="tigergraph-mcp", args=["-v"],
@@ -180,7 +271,7 @@ async def main(cases, cfg, brief_only):
             await s.initialize()
             for cid in cases:
                 try:
-                    await run_case(s, cfg, cid, brief_only=brief_only)
+                    await run_case(s, cfg, cid, brief_only=brief_only, out_dir=out_dir)
                 except Exception as e:  # noqa: BLE001
                     print(f"{cid}: ERROR {type(e).__name__}: {str(e)[:200]}")
 
@@ -194,7 +285,9 @@ if __name__ == "__main__":
     ap.add_argument("--base-url", default=None)
     ap.add_argument("--model", default=None)
     ap.add_argument("--timeout", type=int, default=300)
+    ap.add_argument("--out-dir", default="cases",
+                    help="output directory for answer JSON + traces (e.g. cases/run_20260924)")
     a = ap.parse_args()
     pack = read_case_pack()
     targets = PILOT if a.pilot else ([c for c in sorted(pack)] if a.all else [a.case or "HHG-014"])
-    asyncio.run(main(targets, llm_config(a), a.brief_only))
+    asyncio.run(main(targets, llm_config(a), a.brief_only, out_dir=a.out_dir))
